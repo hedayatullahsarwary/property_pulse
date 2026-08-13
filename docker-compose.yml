@@ -1,0 +1,63 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: property-pulse-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: property-pulse
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - property-pulse-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: property-pulse-phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - property-pulse-network
+
+  mongodb:
+    image: mongo:latest
+    container_name: property-pulse-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secretpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - property-pulse-network
+
+  property-pulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: property-pulse
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+      - mongodb
+    networks:
+      - property-pulse-network
+
+volumes:
+  mysql_data:
+  mongodb_data:
+
+networks:
+  property-pulse-network:
