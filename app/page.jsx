@@ -1,7 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 
-const HomePAge = () => {
+const HomePage = () => {
   return (
     <div>
       <h1 className="text-3xl">
@@ -12,4 +12,4 @@ const HomePAge = () => {
   )
 }
 
-export default HomePAge
+export default HomePage
