@@ -18,8 +18,8 @@ const HomeProperties = () => {
                         <p>
                             No Properties Found
                         </p>
-                    ) : (recentProperties.map((property) => (
-                        <PropertyCard  key={property._id} property={property} />
+                    ) : (recentProperties.map((property, index) => (
+                        <PropertyCard  key={index} property={property} />
                     ))
                     )};
                 </div>
