@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     openssl-dev \
     ca-certificates \
     libc6-compat \
+    mysql-client \
     && update-ca-certificates
 
 # Copy package files first for Docker layer caching
@@ -20,6 +21,9 @@ RUN npm install
 
 # Copy application source
 COPY . .
+
+# Make scripts executable
+RUN chmod +x prisma-commands.sh
 
 EXPOSE 3000
 

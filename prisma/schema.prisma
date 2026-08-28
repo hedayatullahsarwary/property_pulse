@@ -1,0 +1,100 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// User Model
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  name          String?
+  phone         String?
+  role          UserRole       @default(TENANT)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  properties    Property[]     @relation("Owner")
+  savedProperties SavedProperty[]
+  messages     Message[]      @relation("Sender")
+  receivedMessages Message[]  @relation("Receiver")
+}
+
+// Property Model
+model Property {
+  id            String         @id @default(cuid())
+  ownerId       String
+  name          String
+  type          PropertyType
+  description   String
+  street        String
+  city          String
+  state         String
+  zipcode       String
+  beds          Int
+  baths         Int
+  squareFeet    Int
+  amenities     Json          // Changed from String[] to Json
+  rates         Json
+  sellerName    String
+  sellerEmail   String
+  sellerPhone   String
+  images        Json          // Changed from String[] to Json
+  isFeatured    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  owner         User           @relation("Owner", fields: [ownerId], references: [id])
+  savedBy       SavedProperty[]
+  messages      Message[]
+}
+
+// Saved Property (Junction Table)
+model SavedProperty {
+  id            String         @id @default(cuid())
+  userId        String
+  propertyId    String
+  createdAt     DateTime       @default(now())
+
+  user          User           @relation(fields: [userId], references: [id])
+  property      Property       @relation(fields: [propertyId], references: [id])
+
+  @@unique([userId, propertyId])
+}
+
+// Message Model
+model Message {
+  id            String         @id @default(cuid())
+  senderId      String
+  receiverId    String
+  propertyId    String
+  content       String
+  read          Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+
+  sender        User           @relation("Sender", fields: [senderId], references: [id])
+  receiver      User           @relation("Receiver", fields: [receiverId], references: [id])
+  property      Property       @relation(fields: [propertyId], references: [id])
+}
+
+enum UserRole {
+  TENANT
+  LANDLORD
+  ADMIN
+}
+
+enum PropertyType {
+  APARTMENT
+  STUDIO
+  CONDO
+  HOUSE
+  CABIN
+  LOFT
+  ROOM
+  OTHER
+  CHALET
+}
