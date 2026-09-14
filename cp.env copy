@@ -1,0 +1,45 @@
+DATABASE_URL="mysql://root:root@mysql:3306/property-pulse"
+
+DATABASE_HOST=mysql
+DATABASE_PORT=3306
+DATABASE_USER=root
+DATABASE_PASSWORD=root
+DATABASE_NAME=property-pulse
+
+NEXTAUTH_URL = http://localhost:3000
+NUEXTAUTH_URL_INTERNAL = http://localhost:3000
+NEXTAUTH_SECRET="yn0kTNGf06X6S6nAgvsHku5m6ssvXCgEYweqO5rzCNY="
+
+
+# If using SQLite
+# DATABASE_URL="file:./property-pulse.db"
+
+# npx prisma migrate dev --name init
+# npx prisma generate
+# npx prisma db seed
+
+
+# Run the following command to create the migration:
+# For PostgreSQL or MySQL
+# npx prisma migrate dev --name init_property_pulse_db
+
+# If you want to create a migration without applying it
+# npx prisma migrate dev --name init_property_pulse_db --create-only
+
+# For SQLite (no migration needed, just push)
+# npx prisma db push
+
+
+# Push Tables to Database (Alternative Method)
+
+# If you want to push the schema directly without creating a migration file:
+# Push the schema directly to the database
+# npx prisma db push
+
+# Or with force flag if you want to reset data
+# npx prisma db push --force-reset
+
+# npx prisma generate
+
+
+# npx prisma db seed
