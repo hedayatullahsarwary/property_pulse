@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,78 +6,77 @@ datasource db {
   provider = "mysql"
 }
 
-// User Model
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  password      String
-  name          String?
-  phone         String?
-  role          UserRole       @default(TENANT)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  
-  properties    Property[]     @relation("Owner")
-  savedProperties SavedProperty[]
-  messages     Message[]      @relation("Sender")
-  receivedMessages Message[]  @relation("Receiver")
+  id               String          @id @default(cuid())
+  email            String          @unique
+  password         String
+  name             String?
+  phone            String?
+  role             UserRole        @default(TENANT)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  receivedMessages Message[]       @relation("Receiver")
+  messages         Message[]       @relation("Sender")
+  properties       Property[]      @relation("Owner")
+  savedProperties  SavedProperty[]
 }
 
-// Property Model
 model Property {
-  id            String         @id @default(cuid())
-  ownerId       String
-  name          String
-  type          PropertyType
-  description   String
-  street        String
-  city          String
-  state         String
-  zipcode       String
-  beds          Int
-  baths         Int
-  squareFeet    Int
-  amenities     Json          // Changed from String[] to Json
-  rates         Json
-  sellerName    String
-  sellerEmail   String
-  sellerPhone   String
-  images        Json          // Changed from String[] to Json
-  isFeatured    Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String          @id @default(cuid())
+  ownerId     String
+  name        String
+  type        PropertyType
+  description String
+  street      String
+  city        String
+  state       String
+  zipcode     String
+  beds        Int
+  baths       Int
+  squareFeet  Int
+  amenities   Json
+  rates       Json
+  sellerName  String
+  sellerEmail String
+  sellerPhone String
+  images      Json
+  isFeatured  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  messages    Message[]
+  owner       User            @relation("Owner", fields: [ownerId], references: [id])
+  savedBy     SavedProperty[]
 
-  owner         User           @relation("Owner", fields: [ownerId], references: [id])
-  savedBy       SavedProperty[]
-  messages      Message[]
+  @@index([ownerId], map: "Property_ownerId_fkey")
 }
 
-// Saved Property (Junction Table)
 model SavedProperty {
-  id            String         @id @default(cuid())
-  userId        String
-  propertyId    String
-  createdAt     DateTime       @default(now())
-
-  user          User           @relation(fields: [userId], references: [id])
-  property      Property       @relation(fields: [propertyId], references: [id])
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, propertyId])
+  @@index([propertyId], map: "SavedProperty_propertyId_fkey")
 }
 
-// Message Model
 model Message {
-  id            String         @id @default(cuid())
-  senderId      String
-  receiverId    String
-  propertyId    String
-  content       String
-  read          Boolean        @default(false)
-  createdAt     DateTime       @default(now())
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  propertyId String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id])
+  receiver   User     @relation("Receiver", fields: [receiverId], references: [id])
+  sender     User     @relation("Sender", fields: [senderId], references: [id])
 
-  sender        User           @relation("Sender", fields: [senderId], references: [id])
-  receiver      User           @relation("Receiver", fields: [receiverId], references: [id])
-  property      Property       @relation(fields: [propertyId], references: [id])
+  @@index([propertyId], map: "Message_propertyId_fkey")
+  @@index([receiverId], map: "Message_receiverId_fkey")
+  @@index([senderId], map: "Message_senderId_fkey")
 }
 
 enum UserRole {
