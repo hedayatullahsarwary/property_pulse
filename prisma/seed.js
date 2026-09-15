@@ -1,3 +1,4 @@
+// prisma/seed.js
 require('dotenv').config()
 
 const { PrismaClient } = require('@prisma/client')
@@ -14,7 +15,17 @@ const adapter = new PrismaMariaDb({
 
 const prisma = new PrismaClient({ adapter })
 
+// ============================================
+// Helper: Generate avatar URL from user's name
+// ============================================
+function generateAvatar(name) {
+  const encodedName = encodeURIComponent(name || 'User')
+  return `https://ui-avatars.com/api/?name=${encodedName}&background=3b82f6&color=fff&size=200&bold=true`
+}
+
+// ============================================
 // Property type mapping from JSON to Prisma enum
+// ============================================
 const propertyTypeMap = {
   'Apartment': 'APARTMENT',
   'Studio': 'STUDIO',
@@ -27,7 +38,9 @@ const propertyTypeMap = {
   'Chalet': 'CHALET'
 }
 
+// ============================================
 // Sample users to associate with properties
+// ============================================
 const sampleUsers = [
   { id: '1', email: 'john.doe@example.com', name: 'John Doe', phone: '617-555-5555', role: 'LANDLORD' },
   { id: '2', email: 'jane.smith@example.com', name: 'Jane Smith', phone: '212-555-5555', role: 'LANDLORD' },
@@ -43,7 +56,9 @@ const sampleUsers = [
   { id: 'admin-1', email: 'admin@example.com', name: 'Admin User', phone: '555-000-0000', role: 'ADMIN' }
 ]
 
-// Your properties data (all 10 properties)
+// ============================================
+// Properties data (all 10 properties)
+// ============================================
 const propertiesData = [
   {
     "owner": "1",
@@ -217,15 +232,20 @@ const propertiesData = [
   }
 ]
 
+// ============================================
+// Main seeding function
+// ============================================
 async function main() {
   console.log('🌱 Starting seed...')
   console.log('🔐 Hashing passwords with bcrypt...')
+  console.log('🖼️  Generating user avatars...')
 
-  // Hash passwords for all users
+  // Hash passwords AND add avatar images for all users
   const saltRounds = 10
-  const usersWithHashedPasswords = await Promise.all(
+  const usersWithData = await Promise.all(
     sampleUsers.map(async (user) => ({
       ...user,
+      image: generateAvatar(user.name),
       password: await bcrypt.hash('password123', saltRounds)
     }))
   )
@@ -238,14 +258,19 @@ async function main() {
   await prisma.user.deleteMany({})
   console.log('✅ Existing data cleared')
 
-  // 2. Create users
+  // 2. Create users with avatars
   console.log('👤 Creating users...')
   const createdUsers = await Promise.all(
-    usersWithHashedPasswords.map(user => 
+    usersWithData.map(user =>
       prisma.user.create({ data: user })
     )
   )
-  console.log(`✅ Created ${createdUsers.length} users`)
+  console.log(`✅ Created ${createdUsers.length} users with avatars`)
+  
+  // Display created users
+  createdUsers.forEach((user) => {
+    console.log(`   👤 ${user.name} (${user.email}) - ${user.role}`)
+  })
 
   // 3. Create properties
   console.log('\n🏠 Creating properties...')
@@ -254,7 +279,7 @@ async function main() {
 
   for (const property of propertiesData) {
     const propertyType = propertyTypeMap[property.type] || 'APARTMENT'
-    
+
     const ownerExists = createdUsers.find(u => u.id === property.owner)
     if (!ownerExists) {
       console.log(`⚠️  User ${property.owner} not found, skipping: ${property.name}`)
@@ -288,9 +313,9 @@ async function main() {
         }
       })
       createdCount++
-      console.log(`  ✅ Created: ${property.name}`)
+      console.log(`   ✅ ${property.name} (${propertyType})`)
     } catch (error) {
-      console.log(`  ❌ Failed: ${property.name} - ${error.message}`)
+      console.log(`   ❌ Failed: ${property.name} - ${error.message}`)
       skippedCount++
     }
   }
@@ -299,13 +324,13 @@ async function main() {
   // 4. Create saved properties for tenant
   console.log('\n⭐ Creating saved properties...')
   const tenantUser = createdUsers.find(u => u.email === 'tenant@example.com')
-  
+
   if (tenantUser) {
     const allProperties = await prisma.property.findMany({
       take: 3,
       orderBy: { createdAt: 'asc' }
     })
-    
+
     for (const property of allProperties) {
       try {
         await prisma.savedProperty.create({
@@ -314,17 +339,20 @@ async function main() {
             propertyId: property.id
           }
         })
-        console.log(`  ✅ Saved: ${property.name}`)
+        console.log(`   ⭐ ${property.name}`)
       } catch (error) {
-        console.log(`  ❌ Failed to save: ${property.name}`)
+        console.log(`   ❌ Failed to save: ${property.name}`)
       }
     }
+    console.log(`✅ Saved ${allProperties.length} properties for tenant`)
   }
 
   // 5. Create sample messages
   console.log('\n💬 Creating sample messages...')
   const firstProperty = await prisma.property.findFirst()
-  const landlordUser = firstProperty ? createdUsers.find(u => u.id === firstProperty.ownerId) : null
+  const landlordUser = firstProperty
+    ? createdUsers.find(u => u.id === firstProperty.ownerId)
+    : null
 
   if (tenantUser && landlordUser && firstProperty) {
     await prisma.message.create({
@@ -347,7 +375,7 @@ async function main() {
         createdAt: new Date('2024-01-15T11:30:00.000Z')
       }
     })
-    console.log(`  ✅ Created messages about "${firstProperty.name}"`)
+    console.log(`✅ Created messages about "${firstProperty.name}"`)
   }
 
   // 6. Display statistics
@@ -355,18 +383,23 @@ async function main() {
   const totalUsers = await prisma.user.count()
   const totalProperties = await prisma.property.count()
   const totalMessages = await prisma.message.count()
-  
-  console.log(`  👤 Users: ${totalUsers}`)
-  console.log(`  🏠 Properties: ${totalProperties}`)
-  console.log(`  💬 Messages: ${totalMessages}`)
+  const totalSaved = await prisma.savedProperty.count()
+
+  console.log(`   👤 Users: ${totalUsers}`)
+  console.log(`   🏠 Properties: ${totalProperties}`)
+  console.log(`   ⭐ Saved Properties: ${totalSaved}`)
+  console.log(`   💬 Messages: ${totalMessages}`)
 
   console.log('\n✨ Seed completed successfully!')
   console.log('\n🔑 Test Login Credentials:')
-  console.log('  Tenant:  tenant@example.com / password123')
-  console.log('  Landlord: john.doe@example.com / password123')
-  console.log('  Admin:   admin@example.com / password123')
+  console.log('   Tenant:   tenant@example.com / password123')
+  console.log('   Landlord: john.doe@example.com / password123')
+  console.log('   Admin:    admin@example.com / password123')
 }
 
+// ============================================
+// Run the seed
+// ============================================
 main()
   .catch((e) => {
     console.error('\n❌ Seeding failed:', e)
