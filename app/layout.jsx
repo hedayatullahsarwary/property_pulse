@@ -1,3 +1,4 @@
+// app/layout.jsx
 import React from 'react'
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -12,17 +13,17 @@ export const metadata = {
 
 const MainLayout = ({ children }) => {
   return (
-    <AuthProvider>
-      <html lang="en">
-          <body>
+    <html lang="en">
+        <body>
+          <AuthProvider>
             <Navbar />
             <main>
-                  {children}
-              </main> 
-              <Footer />
-          </body>
-      </html>
-    </AuthProvider>
+              {children}
+            </main> 
+            <Footer />
+          </AuthProvider>
+        </body>
+    </html>
   )
 }
 
