@@ -5,10 +5,27 @@ import Link from 'next/link'
 import prisma from '@/lib/db'
 import PropertyHeaderImage from '@/components/PropertyHeaderImage'
 import PropertyDetails from '@/components/PropertyDetails'
+import PropertyImages from '@/components/PropertyImages'
 import Spinner from '@/components/Spinner'
 import { FaArrowLeft } from 'react-icons/fa'
 
-// Create a separate component for the property content
+// ✅ Robust JSON parser
+function safeParseJSON(value, fallback) {
+  if (value === null || value === undefined) return fallback
+  if (Array.isArray(value) || (typeof value === 'object' && !Buffer.isBuffer(value))) {
+    return value
+  }
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch (e) {
+      console.error('JSON parse failed for:', value, e)
+      return fallback
+    }
+  }
+  return fallback
+}
+
 async function PropertyContent({ id }) {
   const property = await prisma.$queryRaw`
     SELECT 
@@ -21,19 +38,30 @@ async function PropertyContent({ id }) {
     WHERE p.id = ${id}
     LIMIT 1
   `
-  
+
   if (!property || property.length === 0) {
     notFound()
   }
 
-  const propertyData = property[0]
-  const images = Array.isArray(propertyData.images) ? propertyData.images : []
+  const raw = property[0]
+
+  // ✅ Normalize everything
+  const propertyData = {
+    ...raw,
+    images: safeParseJSON(raw.images, []),
+    amenities: safeParseJSON(raw.amenities, []),
+    rates: safeParseJSON(raw.rates, {}),
+    // Handle both cases: squareFeet (from schema) and square_feet (if aliased)
+    squareFeet: raw.squareFeet ?? raw.square_feet ?? 0,
+  }
+
+  const images = propertyData.images
 
   return (
     <>
-      <PropertyHeaderImage 
-        image={images.length > 0 ? images[0] : null} 
-        name={propertyData.name} 
+      <PropertyHeaderImage
+        image={images.length > 0 ? images[0] : null}
+        name={propertyData.name}
       />
 
       <section>
@@ -73,7 +101,7 @@ async function PropertyContent({ id }) {
                       className='shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
                       id='name'
                       type='text'
-                      placeholder='Enter your name'             
+                      placeholder='Enter your name'
                       required
                     />
                   </div>
@@ -124,20 +152,24 @@ async function PropertyContent({ id }) {
           </div>
         </div>
       </section>
+
+      {/* ✅ Pass the PARSED array */}
+      <PropertyImages images={images} />
     </>
   )
 }
 
-// Main page component with Suspense
 const PropertyPage = async ({ params }) => {
   const { id } = await params
 
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-blue-50">
-        <Spinner loading={true} />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-blue-50">
+          <Spinner loading={true} />
+        </div>
+      }
+    >
       <PropertyContent id={id} />
     </Suspense>
   )
