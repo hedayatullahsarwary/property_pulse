@@ -11,28 +11,28 @@ const PropertyAddForm = () => {
   const router = useRouter();
 
   const [fields, setFields] = useState({
-    type: "Apartment",
-    name: "Test Property",
-    description: "Test Property Description",
+    type: "",
+    name: "",
+    description: "",
     location: {
       street: "",
-      city: "Test City",
-      state: "Test State",
-      zipcode: "1002",
+      city: "",
+      state: "",
+      zipcode: "",
     },
-    beds: "3",
-    baths: "2",
-    square_feet: "1800",
+    beds: "",
+    baths: "",
+    square_feet: "",
     amenities: [],
     rates: {
       weekly: "",
-      monthly: "2000",
+      monthly: "",
       nightly: "",
     },
     seller_info: {
-      name: "Shamsuddin",
-      email: "test@gmail.com",
-      phone: "+93777694408",
+      name: "",
+      email: "",
+      phone: "",
     },
     images: [],
   });
