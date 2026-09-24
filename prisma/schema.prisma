@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,6 +17,7 @@ model User {
   role             UserRole        @default(TENANT)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+
   receivedMessages Message[]       @relation("Receiver")
   messages         Message[]       @relation("Sender")
   properties       Property[]      @relation("Owner")
@@ -44,11 +46,12 @@ model Property {
   isFeatured  Boolean         @default(false)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+
   messages    Message[]
-  owner       User            @relation("Owner", fields: [ownerId], references: [id])
+  owner       User            @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
   savedBy     SavedProperty[]
 
-  @@index([ownerId], map: "Property_ownerId_fkey")
+  @@index([ownerId])
 }
 
 model SavedProperty {
@@ -56,11 +59,14 @@ model SavedProperty {
   userId     String
   propertyId String
   createdAt  DateTime @default(now())
-  property   Property @relation(fields: [propertyId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
+
+  // ✅ CASCADE: if the property is deleted, delete this saved row too
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  // ✅ CASCADE: if the user is deleted, delete this saved row too
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, propertyId])
-  @@index([propertyId], map: "SavedProperty_propertyId_fkey")
+  @@index([propertyId])
 }
 
 model Message {
@@ -71,13 +77,15 @@ model Message {
   content    String
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
-  property   Property @relation(fields: [propertyId], references: [id])
-  receiver   User     @relation("Receiver", fields: [receiverId], references: [id])
-  sender     User     @relation("Sender", fields: [senderId], references: [id])
 
-  @@index([propertyId], map: "Message_propertyId_fkey")
-  @@index([receiverId], map: "Message_receiverId_fkey")
-  @@index([senderId], map: "Message_senderId_fkey")
+  // ✅ CASCADE: if the property is deleted, delete this message too
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([receiverId])
+  @@index([senderId])
 }
 
 enum UserRole {
