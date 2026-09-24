@@ -2,14 +2,13 @@
 import React, { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import prisma from '@/lib/db'
 import PropertyHeaderImage from '@/components/PropertyHeaderImage'
 import PropertyDetails from '@/components/PropertyDetails'
 import PropertyImages from '@/components/PropertyImages'
 import Spinner from '@/components/Spinner'
 import { FaArrowLeft } from 'react-icons/fa'
 
-// ✅ Robust JSON parser
+// ✅ Robust JSON parser (Prisma returns JSON as strings only with $queryRaw)
 function safeParseJSON(value, fallback) {
   if (value === null || value === undefined) return fallback
   if (Array.isArray(value) || (typeof value === 'object' && !Buffer.isBuffer(value))) {
@@ -27,31 +26,27 @@ function safeParseJSON(value, fallback) {
 }
 
 async function PropertyContent({ id }) {
-  const property = await prisma.$queryRaw`
-    SELECT 
-      p.*,
-      u.name as ownerName,
-      u.email as ownerEmail,
-      u.phone as ownerPhone
-    FROM Property p
-    LEFT JOIN User u ON p.ownerId = u.id
-    WHERE p.id = ${id}
-    LIMIT 1
-  `
+  // ✅ Fetch from the API route
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const res = await fetch(`${baseUrl}/api/properties/${id}`, {
+    cache: 'no-store', // Always fresh data
+  })
 
-  if (!property || property.length === 0) {
-    notFound()
+  if (!res.ok) {
+    if (res.status === 404) {
+      notFound()
+    }
+    throw new Error('Failed to fetch property')
   }
 
-  const raw = property[0]
+  const raw = await res.json()
 
-  // ✅ Normalize everything
+  // ✅ Normalize (safeParseJSON handles both strings and parsed values)
   const propertyData = {
     ...raw,
     images: safeParseJSON(raw.images, []),
     amenities: safeParseJSON(raw.amenities, []),
     rates: safeParseJSON(raw.rates, {}),
-    // Handle both cases: squareFeet (from schema) and square_feet (if aliased)
     squareFeet: raw.squareFeet ?? raw.square_feet ?? 0,
   }
 
@@ -153,7 +148,6 @@ async function PropertyContent({ id }) {
         </div>
       </section>
 
-      {/* ✅ Pass the PARSED array */}
       <PropertyImages images={images} />
     </>
   )
