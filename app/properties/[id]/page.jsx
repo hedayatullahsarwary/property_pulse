@@ -41,7 +41,6 @@ async function PropertyContent({ id }) {
 
   const raw = await res.json()
 
-  // ✅ Normalize (safeParseJSON handles both strings and parsed values)
   const propertyData = {
     ...raw,
     images: safeParseJSON(raw.images, []),

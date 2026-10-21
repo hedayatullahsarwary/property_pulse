@@ -8,6 +8,95 @@ import { unlink } from "fs/promises";
 import path from "path";
 
 // ============================================
+// PUT /api/properties/:id
+// Update a property (owner or admin only)
+// ============================================
+export async function PUT(request, { params }) {
+  try {
+    // 1. Authenticate
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 }
+      );
+    }
+
+    // 2. Get the property ID from the URL
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json(
+        { error: "Property ID is required." },
+        { status: 400 }
+      );
+    }
+
+    // 3. Find the property
+    const property = await prisma.property.findUnique({
+      where: { id },
+    });
+
+    if (!property) {
+      return NextResponse.json(
+        { error: "Property not found." },
+        { status: 404 }
+      );
+    }
+
+    // 4. Verify ownership (or admin)
+    const isOwner = property.ownerId === session.user.id;
+    const isAdmin = session.user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: "You do not have permission to edit this property." },
+        { status: 403 }
+      );
+    }
+
+    // 5. Parse the request body
+    const body = await request.json();
+
+    // 6. Update the property
+    const updated = await prisma.property.update({
+      where: { id },
+      data: {
+        name: body.name,
+        type: body.type,
+        description: body.description,
+        street: body.street,
+        city: body.city,
+        state: body.state,
+        zipcode: body.zipcode,
+        beds: parseInt(body.beds) || 0,
+        baths: parseInt(body.baths) || 0,
+        squareFeet: parseInt(body.square_feet) || 0,
+        amenities: body.amenities,
+        rates: body.rates,
+        sellerName: body.seller_name,
+        sellerEmail: body.seller_email,
+        sellerPhone: body.seller_phone,
+        // Preserve existing images if not provided in the payload
+        images: body.images || property.images,
+      },
+    });
+
+    console.log(`✅ Property updated: ${updated.name} (${id})`);
+
+    return NextResponse.json(
+      { message: "Property updated successfully.", property: updated },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("❌ Error updating property:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update property." },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================
 // DELETE /api/properties/:id
 // Delete a property (owner or admin only)
 // ============================================
